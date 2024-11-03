@@ -647,6 +647,15 @@ class DependencyGraph(object):
         gradfn2module = {}
         visited = {}
         self._2d_4d = True # only for pytorch<=1.8
+
+        # yxhong-tw
+        # -----
+        # This function is the 'hook' function.
+        # You can visit the following link to get more information: https://blog.csdn.net/Brikie/article/details/114255743.
+        #
+        # Execute 'llama3.py' with 'meta-llama/Llama-3.2-3B-Instruct' model:
+        # There is no value of visited module is 0, only 'Embedding(128256, 3072)' is 2, and others are 1.
+        # -----
         def _record_grad_fn(module, inputs, outputs):
             if module not in visited:
                 visited[module] = 1
@@ -661,6 +670,13 @@ class DependencyGraph(object):
             if isinstance(outputs, torch.nn.utils.rnn.PackedSequence):
                 outputs = outputs.data
             gradfn2module[outputs.grad_fn] = module
+
+            # yxhong-tw
+            # -----
+            # I guess there may exist two modules with the same grad_fn.
+            # However, I have not found any examples with below assertion.
+            # -----
+            assert outputs.grad_fn not in gradfn2module or gradfn2module[outputs.grad_fn] == module, "There may exist two modules with the same grad_fn."
 
         registered_types = tuple(ops.type2class(
             t) for t in self.REGISTERED_PRUNERS.keys()) + tuple(self.CUSTOMIZED_PRUNERS.keys())
@@ -686,6 +702,10 @@ class DependencyGraph(object):
         # for recursive models or layers
         reused = [m for (m, count) in visited.items() if count > 1]
 
+        # yxhong-tw
+        # -----
+        # It will not enter the following 'if' statement when executing 'llama3.py' with 'meta-llama/Llama-3.2-3B-Instruct' model.
+        # -----
         # build graph
         if output_transform is not None:
             out = output_transform(out)
