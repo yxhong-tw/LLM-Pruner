@@ -45,4 +45,30 @@ def get_examples(dataset, tokenizer, n_samples, seq_len = 128):
     elif dataset == 'bookcorpus':
         return get_bookcorpus(tokenizer, n_samples, seq_len)
     else:
-        raise NotImplementedError
+        if dataset == 'alpaca':
+            file_name = 'calibration_data/alpaca_82_2048_1.pt'
+        elif dataset == 'openbookqa':
+            file_name = 'calibration_data/openbookqa_385_2048_1.pt'
+        elif dataset == 'piqa':
+            file_name = 'calibration_data/piqa_489_2048_1.pt'
+        elif dataset == 'wikitext2':
+            file_name = 'calibration_data/wikitext2_256_2048_1.pt'
+        else:
+            raise NotImplementedError
+
+        calib_dataset = torch.load(
+            f=file_name,
+            weights_only=True,
+        )
+
+        prompt_list = []
+        for i in range(len(calib_dataset)):
+            j = random.randint(0, calib_dataset[i]['input_ids'].shape[1] - seq_len)
+            prompt_list.append(calib_dataset[i]['input_ids'][:, j:j+seq_len])
+
+            if i == 0:
+                prompts = calib_dataset[i]['input_ids']
+            else:
+                prompts = torch.cat((prompts, calib_dataset[i]['input_ids']), dim=0)
+
+        return torch.cat(prompt_list, dim=0)
