@@ -125,7 +125,7 @@ def main(args):
         for i in range(args.iterative_steps):
 
             if pruner_type in ['taylor']:
-                example_prompts = get_examples(args.calibration_data, tokenizer, args.num_examples, seq_len = 64).to(args.device)
+                example_prompts = get_examples(args.calibration_data, tokenizer, args.num_examples, seq_len = 128).to(args.device)
                 logger.log("Start Backwarding in iterative steps = {}...".format(i))
                 if args.taylor in ['param_mix', 'param_second']:
                     for j in range(args.num_examples):
@@ -193,7 +193,7 @@ def main(args):
         for i in range(args.iterative_steps):
 
             if pruner_type in ['taylor']:
-                example_prompts = get_examples(args.calibration_data, tokenizer, 10, seq_len = 64)
+                example_prompts = get_examples(args.calibration_data, tokenizer, 10, seq_len = 128)
                 logger.log("Start Backwarding in iterative steps = {}...".format(i))
                 loss = model(example_prompts, labels=example_prompts).loss
                 logger.log("Loss = {}".format(loss))
@@ -228,11 +228,16 @@ def main(args):
     torch.cuda.empty_cache()
 
     if args.save_model:
+        save_path = os.path.join(logger.best_checkpoint_path, args.save_ckpt_log_name)
+        save_path = save_path.replace('/pytorch_model.bin', '')
+        os.makedirs(save_path, exist_ok=True)
         model.half()
-        torch.save({
-            'model': model, 
-            'tokenizer': tokenizer,
-        }, logger.best_checkpoint_path)
+        # torch.save({
+        #     'model': model, 
+        #     'tokenizer': tokenizer,
+        # }, logger.best_checkpoint_path)
+        model.save_pretrained(save_path)
+        tokenizer.save_pretrained(save_path)
     
     if args.eval_device != "cpu":
         model.half()
